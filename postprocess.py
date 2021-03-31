@@ -11,15 +11,14 @@ def load_task(task_num, cv_num):
     Load and compute average results per task.
     Parameters:
         task_num: the task index in the range 1-8.
-            Choose from 'Wrazonmate','Wdescal','Wbrevesmate','Wampliasmate',
-                        'Concepts','Problems','Fluency','Calculus'
+            Choose from 'Concepts','AppliedProblems','MathFluency','Calculation'
         cv_num: max number of partitions to consider.
     Returns:
         Mean results, mean noise results, median results, median noise results
         and age results, in order.
     '''
     cvs = np.arange(cv_num)
-    texts = np.asarray(['Concepts','AppliedProblems','MathFluency','Calculus'])
+    texts = np.asarray(['Concepts','AppliedProblems','MathFluency','Calculation'])
     t = texts[task_num-1]
     data = {}
     noise_data = {}
@@ -61,11 +60,11 @@ def load_task(task_num, cv_num):
 
 def run(cvs):
     '''
-    Collect all results from the different partitions, extract medians and 
+    Collect all results from the different partitions, extract medians and
     compute p-values. Save results to csv files for each task.
     '''
     task = load_task(0, cvs)
-    _cols = ['Concepts','AppliedProblems','MathFluency','Calculus']
+    _cols = ['Concepts','AppliedProblems','MathFluency','Calculation']
     tasks = pd.DataFrame(index=task[0][0]['label'].astype(int), columns=_cols)
 
     for i in range(tasks.shape[1]):
@@ -111,6 +110,6 @@ def get_args():
 
 if __name__ == "__main__":
     args = get_args()
-    
+
     # python run.py -c 20
     run(args.cvs)

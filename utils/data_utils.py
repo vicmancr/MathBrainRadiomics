@@ -1,3 +1,5 @@
+'Utils for handling dataset'
+
 import numpy as np
 
 
@@ -5,7 +7,7 @@ def get_data(df, label):
     '''
     Return a subset of columns of provided dataframe by label.
     Params:
-        df: Pandas DataFrame with columns following the pattern 
+        df: Pandas DataFrame with columns following the pattern
             lbXX_radiomics_feature.
         label: Integer value for desired label.
     Returns:
@@ -20,10 +22,10 @@ def get_representatives(df, thrs=0.8):
     '''
     Select representative features based on correlation groups.
     Choose one feature and group with it all features that have
-    a correlation squared greater or equal than a given threshold. 
+    a correlation squared greater or equal than a given threshold.
     Params:
         df: Pandas DataFrame.
-        thrs: (optional) Correlation threshold to consider when 
+        thrs: (optional) Correlation threshold to consider when
             selecting groups.
     Returns:
         Dict with representative of group (lead), index (leadIdx)
@@ -34,16 +36,18 @@ def get_representatives(df, thrs=0.8):
     reprs = {}
     rsquared = auxcorr**2
     gps = 0
-    for idx, cl in enumerate(auxcorr.columns):
+    for idx, col in enumerate(auxcorr.columns):
         if idx in ordering:
             continue
         column = rsquared.iloc[idx].values
         order = np.argsort(column)[::-1]
         ordered = column[order]
         indices = order[ordered > thrs]
+        indices = list(indices)
+        indices.append(idx) # Add the same index being considered
         unq = set(indices) - set(ordering)
         reprs[gps] = {
-            'lead': cl, 'leadIdx': idx, 
+            'lead': col, 'leadIdx': idx,
             'members': list(unq)
         }
         ordering.extend(unq)
@@ -57,7 +61,7 @@ def get_X_y(data, subdf, reprs, outcome=4, use_reprs=True):
     Return X and y data arrays to use as input and output,
     respectively, for a model.
     Params:
-        data: Pandas DataFrame with subjects information and 
+        data: Pandas DataFrame with subjects information and
             results in different tasks.
         subdf: Pandas DataFrame contained desired label.
             This is a subset of the radiomics DataFrame.
@@ -70,16 +74,39 @@ def get_X_y(data, subdf, reprs, outcome=4, use_reprs=True):
         Two numpy arrays serving as X and y for the model.
     '''
     if use_reprs:
-        leads = [v['lead'] for k,v in reprs.items()]
+        leads = [v['lead'] for k, v in reprs.items()]
         aux = subdf.loc[:, np.asarray(leads)].values
     else:
         aux = subdf.values
-    X = np.zeros((aux.shape[0], aux.shape[1]+5))
-    X[:,:-5] = aux
-    X[:, -5] = data['age_at_MRI'].values
-    names = ['Concepts', 'AppliedProblems', 'MathFluency', 'Calculus']
-    for i,n in enumerate(names):
+    X = np.zeros((aux.shape[0], aux.shape[1]+17))
+    X[:, :-17] = aux
+    X[:, -17] = data['age_at_MRI'].values
+    names = ['Concepts', 'AppliedProblems', 'MathFluency', 'Calculation']
+    for i, n in enumerate(names):
         i += 1
-        X[:,-i] = data[n].values
+        X[:, -i] = data[n].values
 
-    return X[:,:-4], X[:,-outcome]
+    return X[:, :-16], X[:, -outcome]
+
+
+def get_X_y_series(data, subdf, outcome=4, use_reprs=True):
+    '''
+    Return X and y data arrays to use as input and output,
+    respectively, for a model.
+    Params:
+        data: Pandas DataFrame with subjects information and
+            results in different tasks.
+        subdf: Pandas DataFrame contained desired label.
+            This is a subset of the radiomics DataFrame.
+        outcome: Integer value pointing to the index of the outcome
+            to choose.
+        use_reprs: Whether reprs are considered or not.
+    Returns:
+        Two numpy arrays serving as X and y for the model.
+    '''
+    X = subdf.copy()
+    names = ['Concepts', 'AppliedProblems', 'MathFluency', 'Calculation']
+
+    X.loc[:, 'age_at_MRI'] = data['age_at_MRI'].values
+
+    return X, data[names[outcome-1]]
